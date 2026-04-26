@@ -276,13 +276,16 @@ export default function WordleMobileReadyGame() {
   }
 
   useEffect(() => {
-    function listener(event) {
-      handleKey(event.key);
-    }
+    // 👉 桌機才用 keydown
+    if (window.innerWidth > 768) {
+      function listener(event) {
+        handleKey(event.key);
+      }
 
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  });
+      window.addEventListener("keydown", listener);
+      return () => window.removeEventListener("keydown", listener);
+    }
+  }, []);
 
   const board = Array.from({ length: MAX_GUESSES }, (_, rowIndex) => {
     if (rowIndex < guesses.length) {
