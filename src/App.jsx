@@ -316,7 +316,15 @@ export default function WordleMobileReadyGame() {
         value={currentGuess}
         onChange={handleMobileInput}
         onKeyDown={handleMobileKeyDown}
-        className="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none"
+        style={{
+          position: "fixed",
+          top: "0px",
+          left: "0px",
+          width: "1px",
+          height: "1px",
+          opacity: 0,
+          zIndex: -1,
+        }}
       />
 
       <div className={`absolute -top-24 -left-24 h-72 w-72 ${theme.glow} rounded-full blur-3xl opacity-40`} />
