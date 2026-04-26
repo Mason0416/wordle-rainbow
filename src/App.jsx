@@ -5,6 +5,25 @@ import englishWords from "an-array-of-english-words";
 const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
 
+// Common 5-letter words suitable for learners before college.
+// The answer will only be selected from this list.
+const PRE_COLLEGE_WORDS = [
+  "about", "above", "after", "again", "alone", "apple", "basic", "beach", "begin", "black",
+  "board", "brain", "bread", "break", "bring", "brown", "build", "carry", "chair", "cheap",
+  "check", "child", "class", "clean", "clear", "clock", "close", "cloud", "color", "could",
+  "dance", "dream", "drink", "drive", "earth", "eight", "enjoy", "every", "field", "fight",
+  "final", "first", "floor", "focus", "force", "fresh", "front", "fruit", "glass", "grade",
+  "grass", "great", "green", "group", "happy", "heart", "heavy", "hello", "horse", "house",
+  "human", "image", "large", "learn", "light", "local", "lucky", "magic", "money", "month",
+  "music", "never", "night", "north", "ocean", "often", "order", "other", "paper", "party",
+  "peace", "phone", "place", "plant", "point", "power", "price", "quiet", "radio", "ready",
+  "right", "river", "round", "score", "sense", "seven", "short", "skill", "small", "smart",
+  "smile", "sound", "south", "space", "speak", "speed", "sport", "stand", "start", "still",
+  "story", "study", "table", "teach", "thank", "their", "there", "thing", "think", "three",
+  "today", "train", "under", "video", "visit", "voice", "water", "where", "white", "world",
+  "write", "young"
+];
+
 const THEMES = [
   {
     day: "Sunday",
@@ -168,13 +187,16 @@ function Keyboard({ onKey, keyStatus }) {
 export default function WordleMobileReadyGame() {
   const inputRef = useRef(null);
   const words = useMemo(() => buildWordList(), []);
+  const answerWords = useMemo(() => PRE_COLLEGE_WORDS, []);
   const theme = THEMES[new Date().getDay()];
 
-  const [answer, setAnswer] = useState(() => getRandomWord(words));
+  const [answer, setAnswer] = useState(() => getRandomWord(PRE_COLLEGE_WORDS));
   const [guesses, setGuesses] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
   const [message, setMessage] = useState("Tap anywhere and guess the word");
   const [gameOver, setGameOver] = useState(false);
+  const [meaning, setMeaning] = useState("");
+  const [isLoadingMeaning, setIsLoadingMeaning] = useState(false);
 
   const keyStatus = useMemo(() => {
     const priority = { correct: 3, present: 2, absent: 1 };
@@ -197,14 +219,48 @@ export default function WordleMobileReadyGame() {
     inputRef.current?.focus();
   }
 
+  async function fetchChineseMeaning(word) {
+    setMeaning("");
+    setIsLoadingMeaning(true);
+
+    try {
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|zh-TW`
+      );
+      const data = await response.json();
+      const translatedText = data?.responseData?.translatedText;
+
+      if (translatedText && translatedText.toLowerCase() !== word.toLowerCase()) {
+        setMeaning(translatedText);
+      } else {
+        setMeaning("找不到中文解釋");
+      }
+    } catch {
+      setMeaning("無法取得中文解釋");
+    } finally {
+      setIsLoadingMeaning(false);
+    }
+  }
+
   function newGame() {
-    const newAnswer = getRandomWord(words);
+    const newAnswer = getRandomWord(answerWords);
     setAnswer(newAnswer);
     setGuesses([]);
     setCurrentGuess("");
     setGameOver(false);
+    setMeaning("");
+    setIsLoadingMeaning(false);
     setMessage("New game started");
     setTimeout(focusMobileInput, 50);
+  }
+
+  function giveUp() {
+    if (gameOver) return;
+
+    setGameOver(true);
+    setCurrentGuess("");
+    setMessage(`You gave up. Answer: ${answer.toUpperCase()}`);
+    fetchChineseMeaning(answer);
   }
 
   function submitGuess() {
@@ -227,12 +283,14 @@ export default function WordleMobileReadyGame() {
     if (currentGuess === answer) {
       setMessage("Correct! You win!");
       setGameOver(true);
+      fetchChineseMeaning(answer);
       return;
     }
 
     if (nextGuesses.length === MAX_GUESSES) {
       setMessage(`Game over. Answer: ${answer.toUpperCase()}`);
       setGameOver(true);
+      fetchChineseMeaning(answer);
       return;
     }
 
@@ -273,19 +331,21 @@ export default function WordleMobileReadyGame() {
       event.preventDefault();
       submitGuess();
     }
+
+    if (event.key === "Backspace") {
+      setCurrentGuess((prev) => prev.slice(0, -1));
+    }
   }
 
   useEffect(() => {
-    // 👉 桌機才用 keydown
-    if (window.innerWidth > 768) {
-      function listener(event) {
-        handleKey(event.key);
-      }
-
-      window.addEventListener("keydown", listener);
-      return () => window.removeEventListener("keydown", listener);
+    function listener(event) {
+      if (event.target === inputRef.current) return;
+      handleKey(event.key);
     }
-  }, []);
+
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  });
 
   const board = Array.from({ length: MAX_GUESSES }, (_, rowIndex) => {
     if (rowIndex < guesses.length) {
@@ -306,7 +366,7 @@ export default function WordleMobileReadyGame() {
 
   return (
     <main
-      onClick={focusMobileInput}
+      onPointerDown={focusMobileInput}
       className={`min-h-screen relative overflow-hidden bg-gradient-to-br ${theme.bg} flex items-center justify-center p-3 sm:p-4`}
     >
       <input
@@ -326,7 +386,6 @@ export default function WordleMobileReadyGame() {
           width: "1px",
           height: "1px",
           opacity: 0,
-          zIndex: -1,
         }}
       />
 
@@ -348,20 +407,45 @@ export default function WordleMobileReadyGame() {
             </p>
           </div>
 
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
-              newGame();
-            }}
-            className={`rounded-2xl px-3 sm:px-4 py-2 text-white text-sm sm:text-base font-black shadow-lg transition ${theme.button}`}
-          >
-            New Game
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                giveUp();
+              }}
+              disabled={gameOver}
+              className="rounded-2xl px-3 sm:px-4 py-2 bg-slate-900 disabled:bg-slate-400 text-white text-sm sm:text-base font-black shadow-lg transition"
+            >
+              Give Up
+            </button>
+
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                newGame();
+              }}
+              className={`rounded-2xl px-3 sm:px-4 py-2 text-white text-sm sm:text-base font-black shadow-lg transition ${theme.button}`}
+            >
+              New Game
+            </button>
+          </div>
         </header>
 
         <div className="mb-4 sm:mb-5 min-h-10 rounded-full bg-white/65 px-5 py-2 text-center text-slate-800 font-bold shadow-sm">
           {message}
         </div>
+
+        {gameOver && (
+          <div className="mb-4 w-full max-w-md rounded-2xl bg-white/70 border border-white/70 px-5 py-4 text-center shadow-md">
+            <div className="text-sm font-bold text-slate-500">Answer</div>
+            <div className="text-3xl font-black tracking-widest text-slate-950 uppercase">
+              {answer}
+            </div>
+            <div className="mt-2 text-base font-bold text-slate-700">
+              中文：{isLoadingMeaning ? "查詢中..." : meaning || "無中文解釋"}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-2 sm:gap-3">
           {board.map((row, rowIndex) => (
