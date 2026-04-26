@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import englishWords from "an-array-of-english-words";
 
 const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
 
-// Common 5-letter words suitable for learners before college.
-// The answer will only be selected from this list.
 const PRE_COLLEGE_WORDS = [
   "about", "above", "after", "again", "alone", "apple", "basic", "beach", "begin", "black",
   "board", "brain", "bread", "break", "bring", "brown", "build", "carry", "chair", "cheap",
@@ -25,55 +23,13 @@ const PRE_COLLEGE_WORDS = [
 ];
 
 const THEMES = [
-  {
-    day: "Sunday",
-    name: "Purple",
-    bg: "from-violet-500 via-purple-400 to-fuchsia-300",
-    glow: "bg-violet-400",
-    button: "bg-violet-700 hover:bg-violet-600",
-  },
-  {
-    day: "Monday",
-    name: "Red",
-    bg: "from-rose-400 via-red-300 to-pink-200",
-    glow: "bg-rose-400",
-    button: "bg-rose-700 hover:bg-rose-600",
-  },
-  {
-    day: "Tuesday",
-    name: "Orange",
-    bg: "from-orange-400 via-amber-300 to-yellow-200",
-    glow: "bg-orange-400",
-    button: "bg-orange-700 hover:bg-orange-600",
-  },
-  {
-    day: "Wednesday",
-    name: "Yellow",
-    bg: "from-yellow-300 via-amber-200 to-orange-100",
-    glow: "bg-yellow-300",
-    button: "bg-yellow-600 hover:bg-yellow-500",
-  },
-  {
-    day: "Thursday",
-    name: "Green",
-    bg: "from-emerald-400 via-green-300 to-lime-200",
-    glow: "bg-emerald-400",
-    button: "bg-emerald-700 hover:bg-emerald-600",
-  },
-  {
-    day: "Friday",
-    name: "Blue",
-    bg: "from-sky-400 via-blue-300 to-cyan-200",
-    glow: "bg-sky-400",
-    button: "bg-sky-700 hover:bg-sky-600",
-  },
-  {
-    day: "Saturday",
-    name: "Indigo",
-    bg: "from-indigo-500 via-blue-400 to-violet-300",
-    glow: "bg-indigo-400",
-    button: "bg-indigo-700 hover:bg-indigo-600",
-  },
+  { day: "Sunday", name: "Purple", bg: "from-violet-500 via-purple-400 to-fuchsia-300", glow: "bg-violet-400", button: "bg-violet-700 hover:bg-violet-600" },
+  { day: "Monday", name: "Red", bg: "from-rose-400 via-red-300 to-pink-200", glow: "bg-rose-400", button: "bg-rose-700 hover:bg-rose-600" },
+  { day: "Tuesday", name: "Orange", bg: "from-orange-400 via-amber-300 to-yellow-200", glow: "bg-orange-400", button: "bg-orange-700 hover:bg-orange-600" },
+  { day: "Wednesday", name: "Yellow", bg: "from-yellow-300 via-amber-200 to-orange-100", glow: "bg-yellow-300", button: "bg-yellow-600 hover:bg-yellow-500" },
+  { day: "Thursday", name: "Green", bg: "from-emerald-400 via-green-300 to-lime-200", glow: "bg-emerald-400", button: "bg-emerald-700 hover:bg-emerald-600" },
+  { day: "Friday", name: "Blue", bg: "from-sky-400 via-blue-300 to-cyan-200", glow: "bg-sky-400", button: "bg-sky-700 hover:bg-sky-600" },
+  { day: "Saturday", name: "Indigo", bg: "from-indigo-500 via-blue-400 to-violet-300", glow: "bg-indigo-400", button: "bg-indigo-700 hover:bg-indigo-600" },
 ];
 
 function buildWordList() {
@@ -185,7 +141,6 @@ function Keyboard({ onKey, keyStatus }) {
 }
 
 export default function WordleMobileReadyGame() {
-  const inputRef = useRef(null);
   const words = useMemo(() => buildWordList(), []);
   const answerWords = useMemo(() => PRE_COLLEGE_WORDS, []);
   const theme = THEMES[new Date().getDay()];
@@ -193,7 +148,7 @@ export default function WordleMobileReadyGame() {
   const [answer, setAnswer] = useState(() => getRandomWord(PRE_COLLEGE_WORDS));
   const [guesses, setGuesses] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
-  const [message, setMessage] = useState("Tap anywhere and guess the word");
+  const [message, setMessage] = useState("Guess the 5-letter word");
   const [gameOver, setGameOver] = useState(false);
   const [meaning, setMeaning] = useState("");
   const [isLoadingMeaning, setIsLoadingMeaning] = useState(false);
@@ -214,11 +169,6 @@ export default function WordleMobileReadyGame() {
 
     return map;
   }, [guesses, answer]);
-
-  function focusMobileInput() {
-    if (!inputRef.current || gameOver) return;
-    inputRef.current.focus({ preventScroll: true });
-  }
 
   async function fetchChineseMeaning(word) {
     setMeaning("");
@@ -252,7 +202,6 @@ export default function WordleMobileReadyGame() {
     setMeaning("");
     setIsLoadingMeaning(false);
     setMessage("New game started");
-    setTimeout(focusMobileInput, 50);
   }
 
   function giveUp() {
@@ -316,31 +265,8 @@ export default function WordleMobileReadyGame() {
     }
   }
 
-  function handleMobileInput(event) {
-    if (gameOver) return;
-
-    const value = event.target.value
-      .toLowerCase()
-      .replace(/[^a-z]/g, "")
-      .slice(0, WORD_LENGTH);
-
-    setCurrentGuess(value);
-  }
-
-  function handleMobileKeyDown(event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      submitGuess();
-    }
-
-    if (event.key === "Backspace") {
-      setCurrentGuess((prev) => prev.slice(0, -1));
-    }
-  }
-
   useEffect(() => {
     function listener(event) {
-      if (event.target === inputRef.current) return;
       handleKey(event.key);
     }
 
@@ -366,36 +292,7 @@ export default function WordleMobileReadyGame() {
   });
 
   return (
-    <main
-      onClick={focusMobileInput}
-      className={`min-h-screen relative overflow-hidden bg-gradient-to-br ${theme.bg} flex items-center justify-center p-3 sm:p-4`}
-    >
-      <input
-        ref={inputRef}
-        type="text"
-        inputMode="text"
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck="false"
-        value={currentGuess}
-        onChange={handleMobileInput}
-        onKeyDown={handleMobileKeyDown}
-        style={{
-          position: "fixed",
-          top: "12px",
-          left: "12px",
-          width: "48px",
-          height: "48px",
-          opacity: 0.01,
-          border: "none",
-          outline: "none",
-          background: "transparent",
-          color: "transparent",
-          caretColor: "transparent",
-          zIndex: 1,
-        }}
-      />
-
+    <main className={`min-h-screen relative overflow-hidden bg-gradient-to-br ${theme.bg} flex items-center justify-center p-3 sm:p-4`}>
       <div className={`absolute -top-24 -left-24 h-72 w-72 ${theme.glow} rounded-full blur-3xl opacity-40`} />
       <div className={`absolute top-1/3 -right-24 h-80 w-80 ${theme.glow} rounded-full blur-3xl opacity-30`} />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.55),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.35),transparent_35%)]" />
@@ -410,16 +307,13 @@ export default function WordleMobileReadyGame() {
               Wordle Rainbow
             </h1>
             <p className="text-slate-700 mt-1 text-sm sm:text-base font-medium">
-              Mobile-ready 5-letter word game
+              Computer keyboard + mobile on-screen keyboard
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2">
             <button
-              onClick={(event) => {
-                event.stopPropagation();
-                giveUp();
-              }}
+              onClick={giveUp}
               disabled={gameOver}
               className="rounded-2xl px-3 sm:px-4 py-2 bg-slate-900 disabled:bg-slate-400 text-white text-sm sm:text-base font-black shadow-lg transition"
             >
@@ -427,10 +321,7 @@ export default function WordleMobileReadyGame() {
             </button>
 
             <button
-              onClick={(event) => {
-                event.stopPropagation();
-                newGame();
-              }}
+              onClick={newGame}
               className={`rounded-2xl px-3 sm:px-4 py-2 text-white text-sm sm:text-base font-black shadow-lg transition ${theme.button}`}
             >
               New Game
