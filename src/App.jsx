@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import englishWords from "an-array-of-english-words";
+import wordList from "./wordList.json";
 
 const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
@@ -142,7 +143,10 @@ function Keyboard({ onKey, keyStatus }) {
 
 export default function WordleMobileReadyGame() {
   const words = useMemo(() => buildWordList(), []);
-  const answerWords = useMemo(() => PRE_COLLEGE_WORDS, []);
+  const answerWords = useMemo(
+    () => wordList.map((w) => w.word),
+    []
+  );
   const theme = THEMES[new Date().getDay()];
 
   const [answer, setAnswer] = useState(() => getRandomWord(PRE_COLLEGE_WORDS));
@@ -170,27 +174,9 @@ export default function WordleMobileReadyGame() {
     return map;
   }, [guesses, answer]);
 
-  async function fetchChineseMeaning(word) {
-    setMeaning("");
-    setIsLoadingMeaning(true);
-
-    try {
-      const response = await fetch(
-        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|zh-TW`
-      );
-      const data = await response.json();
-      const translatedText = data?.responseData?.translatedText;
-
-      if (translatedText && translatedText.toLowerCase() !== word.toLowerCase()) {
-        setMeaning(translatedText);
-      } else {
-        setMeaning("找不到中文解釋");
-      }
-    } catch {
-      setMeaning("無法取得中文解釋");
-    } finally {
-      setIsLoadingMeaning(false);
-    }
+  function getMeaning(word) {
+    const found = wordList.find((w) => w.word === word);
+    return found?.meaning || "無中文解釋";
   }
 
   function newGame() {
@@ -210,7 +196,7 @@ export default function WordleMobileReadyGame() {
     setGameOver(true);
     setCurrentGuess("");
     setMessage(`You gave up. Answer: ${answer.toUpperCase()}`);
-    fetchChineseMeaning(answer);
+    setMeaning(getMeaning(answer));
   }
 
   function submitGuess() {
@@ -233,14 +219,14 @@ export default function WordleMobileReadyGame() {
     if (currentGuess === answer) {
       setMessage("Correct! You win!");
       setGameOver(true);
-      fetchChineseMeaning(answer);
+      setMeaning(getMeaning(answer));
       return;
     }
 
     if (nextGuesses.length === MAX_GUESSES) {
       setMessage(`Game over. Answer: ${answer.toUpperCase()}`);
       setGameOver(true);
-      fetchChineseMeaning(answer);
+      setMeaning(getMeaning(answer));
       return;
     }
 
