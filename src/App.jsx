@@ -216,7 +216,8 @@ export default function WordleMobileReadyGame() {
   }, [guesses, answer]);
 
   function focusMobileInput() {
-    inputRef.current?.focus();
+    if (!inputRef.current || gameOver) return;
+    inputRef.current.focus({ preventScroll: true });
   }
 
   async function fetchChineseMeaning(word) {
@@ -366,7 +367,7 @@ export default function WordleMobileReadyGame() {
 
   return (
     <main
-      onPointerDown={focusMobileInput}
+      onClick={focusMobileInput}
       className={`min-h-screen relative overflow-hidden bg-gradient-to-br ${theme.bg} flex items-center justify-center p-3 sm:p-4`}
     >
       <input
@@ -381,11 +382,17 @@ export default function WordleMobileReadyGame() {
         onKeyDown={handleMobileKeyDown}
         style={{
           position: "fixed",
-          top: "0px",
-          left: "0px",
-          width: "1px",
-          height: "1px",
-          opacity: 0,
+          top: "12px",
+          left: "12px",
+          width: "48px",
+          height: "48px",
+          opacity: 0.01,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          color: "transparent",
+          caretColor: "transparent",
+          zIndex: 1,
         }}
       />
 
