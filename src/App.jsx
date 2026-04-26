@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import englishWords from "an-array-of-english-words";
 
@@ -6,6 +6,13 @@ const WORD_LENGTH = 5;
 const MAX_GUESSES = 6;
 
 const THEMES = [
+  {
+    day: "Sunday",
+    name: "Purple",
+    bg: "from-violet-500 via-purple-400 to-fuchsia-300",
+    glow: "bg-violet-400",
+    button: "bg-violet-700 hover:bg-violet-600",
+  },
   {
     day: "Monday",
     name: "Red",
@@ -48,20 +55,7 @@ const THEMES = [
     glow: "bg-indigo-400",
     button: "bg-indigo-700 hover:bg-indigo-600",
   },
-  {
-    day: "Sunday",
-    name: "Purple",
-    bg: "from-violet-500 via-purple-400 to-fuchsia-300",
-    glow: "bg-violet-400",
-    button: "bg-violet-700 hover:bg-violet-600",
-  },
 ];
-
-function getTodayTheme() {
-  const jsDay = new Date().getDay();
-  const index = jsDay === 0 ? 6 : jsDay - 1;
-  return THEMES[index];
-}
 
 function buildWordList() {
   return Array.from(
@@ -101,7 +95,7 @@ function checkGuess(guess, answer) {
   return result;
 }
 
-function Tile({ letter, status, delay }) {
+function Tile({ letter, status, delay = 0 }) {
   const classes = {
     empty: "bg-white/70 border-white/60 text-slate-900",
     typing: "bg-white border-slate-500 text-slate-900 scale-105",
@@ -117,7 +111,7 @@ function Tile({ letter, status, delay }) {
       initial={{ rotateX: shouldFlip ? -90 : 0, scale: letter && status === "typing" ? 1.06 : 1 }}
       animate={{ rotateX: 0, scale: 1 }}
       transition={{ delay, duration: 0.35 }}
-      className={`h-14 w-14 sm:h-16 sm:w-16 rounded-2xl border-2 flex items-center justify-center text-2xl sm:text-3xl font-black uppercase shadow-md transition ${classes[status]}`}
+      className={`h-12 w-12 sm:h-16 sm:w-16 rounded-2xl border-2 flex items-center justify-center text-2xl sm:text-3xl font-black uppercase shadow-md transition ${classes[status]}`}
     >
       {letter}
     </motion.div>
@@ -135,9 +129,9 @@ function Keyboard({ onKey, keyStatus }) {
   }
 
   return (
-    <div className="mt-6 space-y-2 w-full max-w-xl">
+    <div className="mt-5 space-y-2 w-full max-w-xl">
       {rows.map((row, rowIndex) => (
-        <div key={row} className="flex justify-center gap-1.5">
+        <div key={row} className="flex justify-center gap-1 sm:gap-1.5">
           {rowIndex === 2 && (
             <button
               onClick={() => onKey("Enter")}
@@ -151,7 +145,7 @@ function Keyboard({ onKey, keyStatus }) {
             <button
               key={key}
               onClick={() => onKey(key)}
-              className={`h-11 sm:h-12 min-w-8 sm:min-w-10 px-2 rounded-xl font-black uppercase shadow-md transition ${getKeyClass(key)}`}
+              className={`h-10 sm:h-12 min-w-7 sm:min-w-10 px-1 sm:px-2 rounded-xl font-black uppercase shadow-md transition ${getKeyClass(key)}`}
             >
               {key}
             </button>
@@ -171,20 +165,16 @@ function Keyboard({ onKey, keyStatus }) {
   );
 }
 
-export default function WordleRainbowWeekdayGame() {
+export default function WordleMobileReadyGame() {
+  const inputRef = useRef(null);
   const words = useMemo(() => buildWordList(), []);
-  const theme = useMemo(() => getTodayTheme(), []);
+  const theme = THEMES[new Date().getDay()];
 
-  const [answer, setAnswer] = useState(() => getRandomWord(buildWordList()));
+  const [answer, setAnswer] = useState(() => getRandomWord(words));
   const [guesses, setGuesses] = useState([]);
   const [currentGuess, setCurrentGuess] = useState("");
-  const [message, setMessage] = useState("Guess the 5-letter word");
+  const [message, setMessage] = useState("Tap anywhere and guess the word");
   const [gameOver, setGameOver] = useState(false);
-
-  useEffect(() => {
-    setAnswer(getRandomWord(words));
-    setMessage(`${words.length.toLocaleString()} words loaded`);
-  }, [words]);
 
   const keyStatus = useMemo(() => {
     const priority = { correct: 3, present: 2, absent: 1 };
@@ -203,12 +193,18 @@ export default function WordleRainbowWeekdayGame() {
     return map;
   }, [guesses, answer]);
 
+  function focusMobileInput() {
+    inputRef.current?.focus();
+  }
+
   function newGame() {
-    setAnswer(getRandomWord(words));
+    const newAnswer = getRandomWord(words);
+    setAnswer(newAnswer);
     setGuesses([]);
     setCurrentGuess("");
     setGameOver(false);
     setMessage("New game started");
+    setTimeout(focusMobileInput, 50);
   }
 
   function submitGuess() {
@@ -257,7 +253,25 @@ export default function WordleRainbowWeekdayGame() {
     if (gameOver) return;
 
     if (/^[a-zA-Z]$/.test(key) && currentGuess.length < WORD_LENGTH) {
-      setCurrentGuess((prev) => prev + key.toLowerCase());
+      setCurrentGuess((prev) => (prev + key.toLowerCase()).slice(0, WORD_LENGTH));
+    }
+  }
+
+  function handleMobileInput(event) {
+    if (gameOver) return;
+
+    const value = event.target.value
+      .toLowerCase()
+      .replace(/[^a-z]/g, "")
+      .slice(0, WORD_LENGTH);
+
+    setCurrentGuess(value);
+  }
+
+  function handleMobileKeyDown(event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitGuess();
     }
   }
 
@@ -288,34 +302,53 @@ export default function WordleRainbowWeekdayGame() {
   });
 
   return (
-    <main className={`min-h-screen relative overflow-hidden bg-gradient-to-br ${theme.bg} flex items-center justify-center p-4`}>
+    <main
+      onClick={focusMobileInput}
+      className={`min-h-screen relative overflow-hidden bg-gradient-to-br ${theme.bg} flex items-center justify-center p-3 sm:p-4`}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="text"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck="false"
+        value={currentGuess}
+        onChange={handleMobileInput}
+        onKeyDown={handleMobileKeyDown}
+        className="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none"
+      />
+
       <div className={`absolute -top-24 -left-24 h-72 w-72 ${theme.glow} rounded-full blur-3xl opacity-40`} />
       <div className={`absolute top-1/3 -right-24 h-80 w-80 ${theme.glow} rounded-full blur-3xl opacity-30`} />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.55),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.35),transparent_35%)]" />
 
-      <section className="relative w-full max-w-2xl rounded-[2rem] bg-white/50 backdrop-blur-2xl border border-white/60 shadow-2xl p-5 sm:p-8 flex flex-col items-center">
-        <header className="w-full flex items-start justify-between gap-4 mb-5">
+      <section className="relative w-full max-w-2xl rounded-[2rem] bg-white/50 backdrop-blur-2xl border border-white/60 shadow-2xl p-4 sm:p-8 flex flex-col items-center">
+        <header className="w-full flex items-start justify-between gap-3 mb-4 sm:mb-5">
           <div>
-            <div className="inline-flex rounded-full bg-white/65 px-3 py-1 text-sm font-black text-slate-700 shadow-sm mb-2">
+            <div className="inline-flex rounded-full bg-white/65 px-3 py-1 text-xs sm:text-sm font-black text-slate-700 shadow-sm mb-2">
               {theme.day} · {theme.name}
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-950">
               Wordle Rainbow
             </h1>
-            <p className="text-slate-700 mt-1 font-medium">
-              Unlimited 5-letter word game
+            <p className="text-slate-700 mt-1 text-sm sm:text-base font-medium">
+              Mobile-ready 5-letter word game
             </p>
           </div>
 
           <button
-            onClick={newGame}
-            className={`rounded-2xl px-4 py-2 text-white font-black shadow-lg transition ${theme.button}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              newGame();
+            }}
+            className={`rounded-2xl px-3 sm:px-4 py-2 text-white text-sm sm:text-base font-black shadow-lg transition ${theme.button}`}
           >
             New Game
           </button>
         </header>
 
-        <div className="mb-5 min-h-10 rounded-full bg-white/65 px-5 py-2 text-center text-slate-800 font-bold shadow-sm">
+        <div className="mb-4 sm:mb-5 min-h-10 rounded-full bg-white/65 px-5 py-2 text-center text-slate-800 font-bold shadow-sm">
           {message}
         </div>
 
